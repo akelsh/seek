@@ -2,9 +2,11 @@ import SwiftUI
 
 @main
 struct SeekApp: App {
+    @StateObject private var appStateManager = AppStateManager()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(appStateManager: appStateManager)
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
                     // Clean up file system monitoring when app terminates
                     FileSystemMonitor.shared.stopMonitoring()

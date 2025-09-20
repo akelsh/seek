@@ -171,8 +171,10 @@ class FileSystemMonitor {
         eventStream = nil
 
         // Cancel any pending updates
-        updateTimer?.invalidate()
-        updateTimer = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.updateTimer?.invalidate()
+            self?.updateTimer = nil
+        }
         pendingUpdates.removeAll()
     }
 
@@ -296,14 +298,14 @@ class FileSystemMonitor {
         }
 
         // Batch is full, process immediately
-        updateTimer?.invalidate()
+        
         processPendingUpdates()
     }
 
     private func scheduleUpdateTimer() {
         // Batch updates - wait for more changes or timeout
-        updateTimer?.invalidate()
         DispatchQueue.main.async { [weak self] in
+            self?.updateTimer?.invalidate()
             self?.updateTimer = Timer.scheduledTimer(withTimeInterval: self?.maxBatchDelay ?? 2.0, repeats: false) { [weak self] _ in
                 self?.processPendingUpdates()
             }
