@@ -7,6 +7,7 @@ class SearchService {
 
     private let databaseService = DatabaseService.shared
     private let queryParser = QueryParser()
+    private let logger = LoggingService.shared
 
     // Search result type
     struct SearchResult {
@@ -20,18 +21,18 @@ class SearchService {
     func search(query: String, limit: Int = SeekConfig.Database.defaultSearchLimit) async throws -> SearchResult {
         let startTime = Date()
 
-        print("🔍 Search query: '\(query)'")
+        logger.searchInfo("Search query: '\(query)'")
 
         // Parse query into expression
         let expression = queryParser.parse(query)
-        print("🔍 Parsed expression")
+        logger.searchDebug("Parsed expression")
 
         // Execute unified search
         let entries = try await searchWithExpression(expression: expression, limit: limit)
 
         let searchTime = Date().timeIntervalSince(startTime)
 
-        print("🔍 Search completed: found \(entries.count) results in \(String(format: "%.3f", searchTime))s")
+        logger.searchInfo("Search completed: found \(entries.count) results in \(String(format: "%.3f", searchTime))s")
 
         return SearchResult(
             entries: entries,

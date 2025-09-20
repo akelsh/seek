@@ -4,13 +4,39 @@ import Foundation
 class IndexingService {
     private let batchSize = SeekConfig.Indexing.batchSize
     private let databaseService = DatabaseService.shared
+    private let logger = LoggingService.shared
 
     // MARK: - Public Methods
+
+    /// Perform smart indexing - either full or incremental based on database state
+    /// - Parameter scanPaths: Root paths to scan (defaults to config)
+    func performSmartIndexing(scanPaths: [String] = SeekConfig.Indexing.defaultScanPaths) async throws {
+        logger.indexingInfo("Starting smart indexing analysis")
+
+        // Check if database is indexed and has a valid event ID
+        let isIndexed = try await databaseService.isIndexed()
+        let lastEventId = try await databaseService.getLastEventId()
+
+        if isIndexed, let eventId = lastEventId {
+            // Validate the event ID with FileSystemMonitor
+            let monitor = FileSystemMonitor.shared
+            if monitor.isEventIdValid(eventId, for: scanPaths) {
+                logger.indexingInfo("Database is indexed with valid event ID \(eventId) - incremental updates will be handled by monitoring")
+                return
+            } else {
+                logger.indexingInfo("Event ID \(eventId) is no longer valid - performing full reindex")
+                try await performFullIndexing(scanPaths: scanPaths)
+            }
+        } else {
+            logger.indexingInfo("No previous indexing found - performing full index")
+            try await performFullIndexing(scanPaths: scanPaths)
+        }
+    }
 
     /// Perform a full indexing of the filesystem
     /// - Parameter scanPaths: Root paths to scan (defaults to config)
     func performFullIndexing(scanPaths: [String] = SeekConfig.Indexing.defaultScanPaths) async throws {
-        print("🔄 Starting full indexing...")
+        logger.indexingInfo("Starting full indexing")
         let stats = IndexingStatistics()
 
         // Start by clearing out the database if needed
@@ -18,9 +44,11 @@ class IndexingService {
         let existingCount = try await databaseService.getFileCount()
 
         if existingCount > 0 {
-            print("📦 Clearing existing database with \(existingCount) entries...")
-            try await databaseService.clearAllFileEntries()
-            try await databaseService.clearIndexingStatus()
+            logger.indexingInfo("Clearing existing database with \(existingCount) entries")
+            try await databaseService.recreateDatabase()
+        } else {
+            // Clear any stored event ID since we're doing a full index
+            try await databaseService.clearLastEventId()
         }
 
         // Once the database is clear, we perform the bulk indexing. 
@@ -36,7 +64,7 @@ class IndexingService {
         var totalCount = 0
         for rootPath in scanPaths {
             guard FileManager.default.fileExists(atPath: rootPath) else {
-                print("⚠️ Skipping non-existent path: \(rootPath)")
+                logger.indexingInfo("Skipping non-existent path: \(rootPath)")
                 continue
             }
 
@@ -62,7 +90,7 @@ class IndexingService {
     /// Index a single root path and all its contents
     private func indexRootPath(_ rootURL: URL, stats: IndexingStatistics) async throws -> Int {
         var totalCount = 0
-        print("📁 Indexing: \(rootURL.path)")
+        logger.indexingInfo("Indexing: \(rootURL.path)")
 
         // First, scan root-level files
         let rootFiles = FileSystemScanner.scanRootLevelFiles(at: rootURL)

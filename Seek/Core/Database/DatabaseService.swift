@@ -3,6 +3,8 @@ import SQLite
 
 class DatabaseService {
 
+    private let logger = LoggingService.shared
+
     // MARK: - Properties
 
     // Table definition
@@ -43,12 +45,12 @@ class DatabaseService {
         do {
             try FileManager.default.createDirectory(atPath: seekDirectory, withIntermediateDirectories: true, attributes: nil)
         } catch {
-            print("Failed to create directory: \(error)")
+            logger.databaseError("Failed to create directory: \(error)")
             fatalError("Cannot create database directory: \(error)")
         }
 
         dbPath = SeekConfig.Database.databasePath
-        print("Database path: \(dbPath)")
+        logger.databaseInfo("Database path: \(dbPath)")
 
         // Setup the connections
         setupConnections()
@@ -99,7 +101,7 @@ class DatabaseService {
                 """)
             }
         } catch {
-            print("Database connection error: \(error)")
+            logger.databaseError("Database connection error: \(error)")
             fatalError("Failed to setup database connections: \(error)")
         }
     }
@@ -108,7 +110,7 @@ class DatabaseService {
         do {
             try writeQueue.sync {
                 guard let db = writeConnection else {
-                    print("Write connection not available for table creation")
+                    logger.databaseError("Write connection not available for table creation")
                     return
                 }
 
@@ -173,7 +175,8 @@ class DatabaseService {
                         last_indexed_date REAL,
                         indexed_paths TEXT,
                         total_files_indexed INTEGER DEFAULT 0,
-                        indexing_version INTEGER DEFAULT 1
+                        indexing_version INTEGER DEFAULT 1,
+                        last_event_id INTEGER
                     )
                 """)
 
@@ -181,7 +184,7 @@ class DatabaseService {
                 try db.run("INSERT OR IGNORE INTO indexing_metadata (id, is_indexed) VALUES (1, 0)")
             }
         } catch {
-            print("Table creation error: \(error)")
+            logger.databaseError("Table creation error: \(error)")
             fatalError("Failed to create database tables: \(error)")
         }
     }
@@ -207,9 +210,9 @@ class DatabaseService {
                 LIMIT ?
             """)
 
-            print("Prepared statements created successfully")
+            logger.databaseInfo("Prepared statements created successfully")
         } catch {
-            print("Failed to prepare statements: \(error)")
+            logger.databaseError("Failed to prepare statements: \(error)")
         }
     }
 
@@ -344,7 +347,7 @@ func closeConnections() {
                 entry.dateModified
             )
 
-            print("📁 Upserted entry: \(entry.name)")
+            self.logger.databaseDebug("Upserted entry: \(entry.name)")
         }
     }
 
@@ -479,9 +482,38 @@ func closeConnections() {
 
     /// Clear all file entries from the database (for full reindex)
     func clearAllFileEntries() async throws {
-        try await performWrite { db in
+        _ = try await performWrite { db in
             try db.run("DELETE FROM file_entries")
         }
+    }
+
+    /// Fastest way to clear database - delete file and recreate
+    func recreateDatabase() async throws {
+        // Close all connections first
+        closeConnections()
+
+        // Delete the database file
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: dbPath) {
+            try fileManager.removeItem(atPath: dbPath)
+        }
+
+        // Also remove WAL and SHM files if they exist
+        let walPath = dbPath + "-wal"
+        let shmPath = dbPath + "-shm"
+
+        if fileManager.fileExists(atPath: walPath) {
+            try fileManager.removeItem(atPath: walPath)
+        }
+
+        if fileManager.fileExists(atPath: shmPath) {
+            try fileManager.removeItem(atPath: shmPath)
+        }
+
+        // Recreate connections and tables
+        setupConnections()
+        createTables()
+        prepareStatements()
     }
 
     /// Remove all entries with a specific path prefix (for directory deletion)
@@ -515,6 +547,39 @@ func closeConnections() {
                 WHERE id = 1
             """
             try db.run(sql, Date().timeIntervalSince1970)
+        }
+    }
+
+    /// Store the last processed FSEvent ID
+    func storeLastEventId(_ eventId: FSEventStreamEventId) async throws {
+        try await performWrite { db in
+            let sql = """
+                UPDATE indexing_metadata
+                SET last_event_id = ?
+                WHERE id = 1
+            """
+            try db.run(sql, Int64(eventId))
+        }
+    }
+
+    /// Get the last processed FSEvent ID
+    func getLastEventId() async throws -> FSEventStreamEventId? {
+        return try await performRead { db in
+            let sql = "SELECT last_event_id FROM indexing_metadata WHERE id = 1"
+            let result = try db.scalar(sql) as? Int64
+            return result.map { FSEventStreamEventId($0) }
+        }
+    }
+
+    /// Clear the stored event ID (for full reindex)
+    func clearLastEventId() async throws {
+        try await performWrite { db in
+            let sql = """
+                UPDATE indexing_metadata
+                SET last_event_id = NULL
+                WHERE id = 1
+            """
+            try db.run(sql)
         }
     }
 

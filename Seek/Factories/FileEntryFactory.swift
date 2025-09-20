@@ -3,12 +3,14 @@ import Foundation
 /// Factory for creating FileEntry objects from filesystem URLs
 class FileEntryFactory {
 
+    private static let logger = LoggingService.shared
+
     /// Safely execute filesystem operations with error handling
     private static func safeFileSystemOperation<T>(_ operation: () throws -> T) -> T? {
         do {
             return try operation()
         } catch {
-            print("Filesystem error: \(error)")
+            logger.error("Filesystem error: \(error)")
             return nil
         }
     }

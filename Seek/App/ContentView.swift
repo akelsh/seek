@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var monitoringStatus = "Initializing..."
 
     private let searchService = SearchService()
+    private let logger = LoggingService.shared
 
     var body: some View {
         VStack(spacing: 20) {
@@ -326,7 +327,7 @@ struct ContentView: View {
         do {
             totalFiles = try await DatabaseService.shared.getFileCount()
         } catch {
-            print("Failed to get file count: \(error)")
+            logger.error("Failed to get file count: \(error)")
         }
     }
 
@@ -347,7 +348,7 @@ struct ContentView: View {
                 return exts
             }
 
-            print("🔍 DEBUG: Extensions in database: \(extensions)")
+            logger.debug("Extensions in database: \(extensions)")
 
             // Check for .app files specifically
             let appFiles = try await dbService.performRead { db in
@@ -363,9 +364,9 @@ struct ContentView: View {
                 return files
             }
 
-            print("🔍 DEBUG: .app files in database (\(appFiles.count) found):")
+            logger.debug(".app files in database (\(appFiles.count) found):")
             for (name, isDir, ext) in appFiles {
-                print("   - \(name) | isDirectory: \(isDir) | extension: '\(ext ?? "nil")'")
+                logger.debug("   - \(name) | isDirectory: \(isDir) | extension: '\(ext ?? "nil")'")
             }
 
             // Check specifically for app extension
@@ -375,7 +376,7 @@ struct ContentView: View {
                 return Int(count)
             }
 
-            print("🔍 DEBUG: Files with extension='app': \(appExtensionCount)")
+            logger.debug("Files with extension='app': \(appExtensionCount)")
 
             // Check for Spotify specifically
             let spotifyFiles = try await dbService.performRead { db in
@@ -391,13 +392,13 @@ struct ContentView: View {
                 return files
             }
 
-            print("🔍 DEBUG: Spotify files in database (\(spotifyFiles.count) found):")
+            logger.debug("Spotify files in database (\(spotifyFiles.count) found):")
             for (name, path, ext) in spotifyFiles {
-                print("   - \(name) | \(path) | extension: '\(ext ?? "nil")'")
+                logger.debug("   - \(name) | \(path) | extension: '\(ext ?? "nil")'")
             }
 
         } catch {
-            print("🔍 DEBUG: Database query failed: \(error)")
+            logger.error("Database query failed: \(error)")
         }
     }
 
@@ -409,7 +410,7 @@ struct ContentView: View {
                 lastIndexedDate = status.lastIndexedDate
             }
         } catch {
-            print("Failed to get indexing status: \(error)")
+            logger.error("Failed to get indexing status: \(error)")
         }
     }
 
