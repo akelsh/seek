@@ -9,7 +9,7 @@ struct ContentView: View {
             Group {
                 switch appStateManager.currentState {
                 case .onboarding:
-                    OnboardingView()
+                    OnboardingView(appStateManager: appStateManager)
                         .transition(.opacity)
 
                 case .mainApp:
