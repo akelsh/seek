@@ -12,7 +12,7 @@ struct SearchResultsView: View {
         ZStack(alignment: .top) {
             // Background content
             searchContent
-            
+
             // Floating search bar
             floatingSearchBar
         }
@@ -41,7 +41,7 @@ struct SearchResultsView: View {
         VStack {
             SearchBar(searchText: $searchViewModel.searchText, isFocused: $searchFieldFocused)
                 .padding(.horizontal)
-                .padding(.top, isSidebarVisible ? 24 : 64)
+                .padding(.top, isSidebarVisible ? 32 : 72)
             Spacer()
         }
     }
@@ -247,11 +247,15 @@ struct ResultsListView: View {
             .onChange(of: selectedIndex) { _, newIndex in
                 scrollToSelectedItem(newIndex, proxy: proxy)
             }
+            .mask(
+                Rectangle()
+                    .padding(.top, isSidebarVisible ? 0 : 50)
+            )
         }
     }
     
     private var topPadding: CGFloat {
-        isSidebarVisible ? 88 : 128
+        isSidebarVisible ? 96 : 136
     }
     
     private var resultsHeader: some View {
@@ -420,3 +424,4 @@ struct SearchResultItem: View {
         return formatter.localizedString(for: fileEntry.dateModifiedAsDate, relativeTo: Date())
     }
 }
+
