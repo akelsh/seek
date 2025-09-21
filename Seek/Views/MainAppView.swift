@@ -18,15 +18,15 @@ struct MainAppView: View {
                 Group {
                     switch selectedView {
                     case .search:
-                        SearchView(
-                            isSidebarVisible: columnVisibility != .detailOnly
-                        )
+                        SearchView(isSidebarVisible: columnVisibility != .detailOnly)
                     case .settings:
                         SettingsView()
                     case .help:
                         HelpView()
                     }
                 }
+                .id(selectedView)
+                .animation(.easeInOut(duration: 0.2), value: selectedView)
             }
         )
         .background(SeekTheme.appBackground)
