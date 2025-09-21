@@ -41,7 +41,7 @@ struct SearchResultsView: View {
         VStack {
             SearchBar(searchText: $searchViewModel.searchText, isFocused: $searchFieldFocused)
                 .padding(.horizontal)
-                .padding(.top, isSidebarVisible ? 16 : 56)
+                .padding(.top, isSidebarVisible ? 24 : 64)
             Spacer()
         }
     }
@@ -251,7 +251,7 @@ struct ResultsListView: View {
     }
     
     private var topPadding: CGFloat {
-        isSidebarVisible ? 80 : 120
+        isSidebarVisible ? 88 : 128
     }
     
     private var resultsHeader: some View {
