@@ -9,41 +9,29 @@ struct SearchResultsView: View {
     @State private var selectedIndex: Int?
     
     var body: some View {
-        ZStack(alignment: .top) {
-            // Background content
-            searchContent
-
-            // Floating search bar
-            floatingSearchBar
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea(.all, edges: .top)
-        .navigationTitle("")
-        .onAppear {
-            searchFieldFocused = true
-        }
-        .onKeyPress(.upArrow) {
-            navigateResults(direction: -1)
-            return .handled
-        }
-        .onKeyPress(.downArrow) {
-            navigateResults(direction: 1)
-            return .handled
-        }
-        .onKeyPress(.return) {
-            openSelectedFile()
-            return .handled
-        }
-    }
-    
-    // MARK: - View Components
-    private var floatingSearchBar: some View {
-        VStack {
-            SearchBar(searchText: $searchViewModel.searchText, isFocused: $searchFieldFocused)
-                .padding(.horizontal)
-                .padding(.top, isSidebarVisible ? 32 : 72)
-            Spacer()
-        }
+        searchContent
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .top) {
+                SearchBar(searchText: $searchViewModel.searchText, isFocused: $searchFieldFocused)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+            }
+            .navigationTitle("")
+            .onAppear {
+                searchFieldFocused = true
+            }
+            .onKeyPress(.upArrow) {
+                navigateResults(direction: -1)
+                return .handled
+            }
+            .onKeyPress(.downArrow) {
+                navigateResults(direction: 1)
+                return .handled
+            }
+            .onKeyPress(.return) {
+                openSelectedFile()
+                return .handled
+            }
     }
     
     @ViewBuilder
@@ -153,7 +141,7 @@ struct SearchBar: View {
             Color.clear
                 .glassEffect(
                     .regular.tint(SeekTheme.appElevated.opacity(0.1)),
-                    in: RoundedRectangle(cornerRadius: SeekTheme.cornerRadiusLarge)
+                    in: RoundedRectangle(cornerRadius: 32)
                 )
         } else {
             RoundedRectangle(cornerRadius: SeekTheme.cornerRadiusLarge)
@@ -241,21 +229,12 @@ struct ResultsListView: View {
                     resultsHeader
                     resultsList
                 }
-                .padding(.top, topPadding)
             }
             .scrollIndicators(.visible)
             .onChange(of: selectedIndex) { _, newIndex in
                 scrollToSelectedItem(newIndex, proxy: proxy)
             }
-            .mask(
-                Rectangle()
-                    .padding(.top, isSidebarVisible ? 0 : 50)
-            )
         }
-    }
-    
-    private var topPadding: CGFloat {
-        isSidebarVisible ? 96 : 136
     }
     
     private var resultsHeader: some View {

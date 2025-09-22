@@ -3,6 +3,7 @@ import SwiftUI
 struct MainAppView: View {
     @State private var selectedView: MainView = .search
     @State private var columnVisibility = NavigationSplitViewVisibility.all
+    @StateObject private var searchViewModel = SearchViewModel()
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility,
@@ -30,6 +31,39 @@ struct MainAppView: View {
             }
         )
         .background(SeekTheme.appBackground)
+        .toolbar {
+            if selectedView == .search {
+                ToolbarItemGroup(placement: .navigation) {
+                    Button(action: {
+                        // Refresh action
+                        searchViewModel.searchText = searchViewModel.searchText
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .disabled(searchViewModel.searchResults.isEmpty)
+
+                    Button(action: {
+                        // Share action
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .disabled(searchViewModel.searchResults.isEmpty)
+                }
+
+                ToolbarItem {
+                    Spacer()
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    
+                    Button(action: {
+                        // Add action
+                    }) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+        }
     }
 }
 
