@@ -1,6 +1,6 @@
 import Foundation
 
-struct FileEntry: Identifiable, Codable {
+struct FileEntry: Identifiable, Codable, Equatable {
     // Use fullPath as the unique identifier instead of database ID
     var id: String { fullPath }
 

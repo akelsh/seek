@@ -4,81 +4,46 @@ import AppKit
 
 @MainActor
 class SearchViewModel: ObservableObject {
-    // MARK: - Published Properties
+    // MARK: - Published Properties (only for UI binding)
     @Published var searchText = ""
-    @Published var searchResults: [FileEntry] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    @Published var searchTime: TimeInterval = 0
-    @Published var resultCount: Int = 0
-    @Published var iconCache: [String: NSImage] = [:]
-    
+
+    // MARK: - Callbacks (to avoid @Published rebuilding views)
+    var onResultsChanged: (([FileEntry], TimeInterval, String?) -> Void)?
+
     // MARK: - Private Properties
     private let searchService = SearchService()
     private var searchTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
-    
-    // MARK: - Computed Properties for View Compatibility
-    var state: SearchState {
-        if let error = errorMessage {
-            return .error(error)
-        } else if isLoading {
-            return .searching
-        } else if searchText.isEmpty {
-            return .idle
-        } else if !searchResults.isEmpty || searchTime > 0 {
-            return .results(SearchResults(
-                entries: searchResults,
-                searchTime: searchTime
-            ))
-        }
-        return .idle
-    }
-    
-    // MARK: - Types
-    enum SearchState {
-        case idle
-        case searching
-        case results(SearchResults)
-        case error(String)
-    }
-    
-    struct SearchResults {
-        let entries: [FileEntry]
-        let searchTime: TimeInterval
-        var count: Int { entries.count }
-    }
-    
+    private let iconLoadingQueue = DispatchQueue(label: "com.seek.iconLoading", attributes: .concurrent)
+
+    // Icon cache - not published to avoid view updates
+    private var iconCache: [String: NSImage] = [:]
+
     // MARK: - Initialization
     init() {
         setupSearchTextObserver()
     }
-    
+
     // MARK: - Public Methods
     func clearSearch() {
         searchText = ""
-        searchResults = []
-        errorMessage = nil
-        isLoading = false
-        iconCache = [:]
+        // Notify with empty results
+        onResultsChanged?([], 0, nil)
     }
-    
+
     func icon(for path: String) -> NSImage {
-        if let cached = iconCache[path] {
+        // Ensure path is a proper string to avoid NSNumber crashes
+        let safePath = String(describing: path)
+
+        if let cached = iconCache[safePath] {
             return cached
         }
-        
-        // Don't update cache during view updates - just return the icon
-        let icon = NSWorkspace.shared.icon(forFile: path)
-        
-        // Schedule cache update for next run loop
-        Task { @MainActor in
-            iconCache[path] = icon
-        }
-        
+
+        let icon = NSWorkspace.shared.icon(forFile: safePath)
+        iconCache[safePath] = icon
         return icon
     }
-    
+
     // MARK: - Private Methods
     private func setupSearchTextObserver() {
         $searchText
@@ -89,74 +54,65 @@ class SearchViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
+
     private func performSearch(query: String) {
         // Cancel previous search
         searchTask?.cancel()
-        
+
         // Clear results if query is empty
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            clearSearchResults()
+            onResultsChanged?([], 0, nil)
             return
         }
-        
+
         executeSearch(query: query)
     }
-    
-    private func clearSearchResults() {
-        searchResults = []
-        isLoading = false
-        errorMessage = nil
-        searchTime = 0
-        resultCount = 0
-    }
-    
+
     private func executeSearch(query: String) {
-        isLoading = true
-        errorMessage = nil
-        
-        searchTask = Task {
+        searchTask = Task { [weak self] in
+            guard let self = self else { return }
+
             let startTime = CFAbsoluteTimeGetCurrent()
-            
+
             do {
                 let result = try await searchService.search(query: query, limit: 100)
-                
+
                 // Check if task was cancelled
                 guard !Task.isCancelled else { return }
-                
+
                 let endTime = CFAbsoluteTimeGetCurrent()
-                searchTime = endTime - startTime
-                searchResults = result.entries
-                resultCount = result.entries.count
-                isLoading = false
-                
-                // Preload icons for smooth scrolling
-                preloadIcons(for: result.entries)
-                
+                let searchTime = endTime - startTime
+
+                await MainActor.run {
+                    // Notify view with results via callback (not @Published)
+                    self.onResultsChanged?(result.entries, searchTime, nil)
+                }
+
+                // Preload icons in background
+                self.preloadIconsInBackground(for: result.entries)
+
             } catch {
                 // Check if task was cancelled
                 guard !Task.isCancelled else { return }
-                
+
                 let endTime = CFAbsoluteTimeGetCurrent()
-                searchTime = endTime - startTime
-                errorMessage = "Search failed: \(error.localizedDescription)"
-                searchResults = []
-                resultCount = 0
-                isLoading = false
+                let searchTime = endTime - startTime
+
+                await MainActor.run {
+                    // Notify view with error via callback
+                    self.onResultsChanged?([], searchTime, "Search failed: \(error.localizedDescription)")
+                }
             }
         }
     }
-    
-    private func preloadIcons(for entries: [FileEntry]) {
-        Task {
-            await withTaskGroup(of: Void.self) { group in
-                for entry in entries {
-                    group.addTask {
-                        let icon = NSWorkspace.shared.icon(forFile: entry.fullPath)
-                        await MainActor.run {
-                            self.iconCache[entry.fullPath] = icon
-                        }
-                    }
+
+    private func preloadIconsInBackground(for entries: [FileEntry]) {
+        iconLoadingQueue.async { [weak self] in
+            for entry in entries.prefix(50) { // Limit to first 50 for performance
+                guard let self = self else { break }
+                if self.iconCache[entry.fullPath] == nil {
+                    let icon = NSWorkspace.shared.icon(forFile: entry.fullPath)
+                    self.iconCache[entry.fullPath] = icon
                 }
             }
         }
