@@ -207,7 +207,7 @@ struct NavigationButton: View {
                     .frame(width: 16)
                 
                 Text(title)
-                    .foregroundColor(isSelected ? SeekTheme.appPrimary : SeekTheme.appTextPrimary)
+                    .foregroundColor(SeekTheme.appTextPrimary)
                     .font(.system(size: 13))
                 
                 Spacer()

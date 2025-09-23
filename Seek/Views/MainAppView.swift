@@ -3,6 +3,9 @@ import SwiftUI
 struct MainAppView: View {
     @State private var selectedView: MainViewType = .search
     @State private var columnVisibility = NavigationSplitViewVisibility.all
+    @State private var hasSearchResults = false
+    @State private var refreshTrigger = false
+    @State private var isRefreshing = false
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility,
@@ -18,7 +21,7 @@ struct MainAppView: View {
                 Group {
                     switch selectedView {
                     case .search:
-                        SearchView(isSidebarVisible: columnVisibility != .detailOnly)
+                        SearchView(isSidebarVisible: columnVisibility != .detailOnly, hasSearchResults: $hasSearchResults, refreshTrigger: $refreshTrigger, isRefreshing: $isRefreshing)
                     case .settings:
                         SettingsView()
                     case .help:
@@ -34,16 +37,19 @@ struct MainAppView: View {
             if selectedView == .search {
                 ToolbarItemGroup(placement: .navigation) {
                     Button(action: {
-                        // Refresh action - could trigger refresh via notification
+                        isRefreshing = true
+                        refreshTrigger.toggle()
                     }) {
                         Image(systemName: "arrow.clockwise")
                     }
+                    .disabled(!hasSearchResults || isRefreshing)
 
                     Button(action: {
-                        // Share action
+                        // Download action
                     }) {
-                        Image(systemName: "square.and.arrow.up")
+                        Image(systemName: "arrow.down.doc")
                     }
+                    .disabled(!hasSearchResults)
                 }
 
                 ToolbarItem {

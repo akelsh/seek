@@ -3,14 +3,17 @@ import AppKit
 
 struct SearchView: View {
     let isSidebarVisible: Bool
+    @Binding var hasSearchResults: Bool
+    @Binding var refreshTrigger: Bool
+    @Binding var isRefreshing: Bool
     @StateObject private var searchViewModel = SearchViewModel()
 
     // Local state - independent of search results
     @State private var results: [FileEntry] = []
-    @State private var hasSearchResults = false  // Track if we've received search results
     @State private var errorMessage: String?
     @State private var searchTime: TimeInterval = 0
     @State private var selectedIndex: Int?
+    @State private var refreshStartTime: Date?
 
     // Focus management
     @FocusState private var isSearchFocused: Bool
@@ -46,6 +49,11 @@ struct SearchView: View {
                 }
             }
         }
+        .onChange(of: refreshTrigger) { _, _ in
+            logger.debug("SearchView: Refresh triggered, reperforming search")
+            refreshStartTime = Date()
+            searchViewModel.reperformSearch()
+        }
         .onKeyPress(.upArrow) {
             logger.debug("SearchView: Up arrow pressed")
             navigateResults(direction: -1)
@@ -67,7 +75,9 @@ struct SearchView: View {
     // MARK: - Results Area
     @ViewBuilder
     private var resultsArea: some View {
-        if let errorMessage = errorMessage {
+        if isRefreshing {
+            refreshingView
+        } else if let errorMessage = errorMessage {
             errorView(message: errorMessage)
         } else if !hasSearchResults {
             // Haven't received any search results yet
@@ -106,7 +116,7 @@ struct SearchView: View {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48, weight: .light))
                 .foregroundColor(SeekTheme.appTextTertiary)
-            
+
             VStack(spacing: 8) {
                 Text("No files found")
                     .font(.system(size: 18, weight: .medium))
@@ -116,6 +126,25 @@ struct SearchView: View {
                     .font(.system(size: 14))
                     .foregroundColor(SeekTheme.appTextTertiary)
                     .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var refreshingView: some View {
+        VStack(spacing: 24) {
+            // Custom loading spinner
+            SeekLoadingSpinner()
+                .frame(width: 48, height: 48)
+
+            VStack(spacing: 8) {
+                Text("Refreshing...")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(SeekTheme.appTextSecondary)
+
+                Text("Please wait a moment")
+                    .font(.system(size: 14))
+                    .foregroundColor(SeekTheme.appTextTertiary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -171,6 +200,23 @@ struct SearchView: View {
                         self.hasSearchResults = true
                         self.logger.debug("SearchView: Search results received, hasSearchResults set to true")
                     }
+
+                    // Stop refresh animation if it was a refresh
+                    if self.isRefreshing {
+                        // Calculate how long the refresh has been showing
+                        let elapsedTime = self.refreshStartTime?.timeIntervalSinceNow ?? 0
+                        let minimumDisplayTime: TimeInterval = 1.2  // Show for at least 1.2 seconds
+                        let remainingTime = max(0, minimumDisplayTime + elapsedTime)
+
+                        self.logger.debug("SearchView: Refresh complete, will hide after \(remainingTime)s")
+
+                        // Delay hiding if needed to meet minimum display time
+                        DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                self.isRefreshing = false
+                            }
+                        }
+                    }
                 }
 
                 // Maintain focus after search completes
@@ -212,5 +258,5 @@ struct SearchView: View {
 
 
 #Preview {
-    SearchView(isSidebarVisible: true)
+    SearchView(isSidebarVisible: true, hasSearchResults: .constant(false), refreshTrigger: .constant(false), isRefreshing: .constant(false))
 }

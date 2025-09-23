@@ -33,6 +33,15 @@ class SearchViewModel: ObservableObject {
         logger.debug("SearchViewModel: Search cleared, notified with empty results")
     }
 
+    func reperformSearch() {
+        logger.debug("SearchViewModel: Reperforming search with current query: '\(searchText)'")
+        guard !searchText.isEmpty else {
+            logger.debug("SearchViewModel: Cannot refresh - search text is empty")
+            return
+        }
+        performSearch(query: searchText)
+    }
+
     func icon(for path: String) -> NSImage {
         return iconCacheService.icon(for: path)
     }
