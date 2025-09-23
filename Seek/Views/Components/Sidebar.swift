@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct Sidebar: View {
-    @Binding var selectedView: MainView
+    @Binding var selectedView: MainViewType
     @State private var quickAccessExpanded = true
     @State private var locationsExpanded = true
     @State private var filterByExpanded = true

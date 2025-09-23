@@ -7,7 +7,7 @@ struct SearchView: View {
 
     // Local state - independent of search results
     @State private var results: [FileEntry] = []
-    @State private var isSearching = false
+    @State private var hasSearchResults = false  // Track if we've received search results
     @State private var errorMessage: String?
     @State private var searchTime: TimeInterval = 0
     @State private var selectedIndex: Int?
@@ -15,104 +15,104 @@ struct SearchView: View {
     // Focus management
     @FocusState private var isSearchFocused: Bool
 
+    private let logger = LoggingService.shared
+
     var body: some View {
         VStack(spacing: 0) {
             // Search bar - always present, never rebuilds
-            searchBar
-                .padding(.horizontal)
+            SearchBar(searchViewModel: searchViewModel, isSearchFocused: $isSearchFocused)
+                .padding(.horizontal, 8)
                 .padding(.vertical, 8)
 
             // Results area - stable structure, content changes
             resultsArea
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle("")
         .onAppear {
+            logger.debug("SearchView: View appeared")
             if searchViewModel.onResultsChanged == nil {
+                logger.debug("SearchView: Setting up search callback")
                 setupSearchCallback()
             }
             isSearchFocused = true
+            logger.debug("SearchView: Search field focused")
+        }
+        .onChange(of: searchViewModel.searchText) { _, newValue in
+            if newValue.isEmpty {
+                logger.debug("SearchView: Search text cleared, clearing results")
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    results = []
+                    hasSearchResults = false
+                }
+            }
         }
         .onKeyPress(.upArrow) {
+            logger.debug("SearchView: Up arrow pressed")
             navigateResults(direction: -1)
             return .handled
         }
         .onKeyPress(.downArrow) {
+            logger.debug("SearchView: Down arrow pressed")
             navigateResults(direction: 1)
             return .handled
         }
         .onKeyPress(.return) {
+            logger.debug("SearchView: Return key pressed, opening selected file")
             openSelectedFile()
             return .handled
         }
     }
 
-    // MARK: - Search Bar
-    private var searchBar: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(SeekTheme.appTextSecondary)
-                .font(.system(size: 16, weight: .medium))
-
-            TextField("Search files...", text: $searchViewModel.searchText)
-                .font(.system(size: 15))
-                .textFieldStyle(PlainTextFieldStyle())
-                .focused($isSearchFocused)
-
-            if !searchViewModel.searchText.isEmpty {
-                Button(action: { searchViewModel.clearSearch() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(SeekTheme.appTextSecondary)
-                        .font(.system(size: 14))
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(searchBarBackground)
-    }
-
-    @ViewBuilder
-    private var searchBarBackground: some View {
-        if #available(macOS 26.0, *) {
-            Color.clear
-                .glassEffect(
-                    .regular.tint(SeekTheme.appElevated.opacity(0.1)),
-                    in: RoundedRectangle(cornerRadius: 32)
-                )
-        } else {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.thinMaterial)
-        }
-    }
 
     // MARK: - Results Area
     @ViewBuilder
     private var resultsArea: some View {
         if let errorMessage = errorMessage {
             errorView(message: errorMessage)
-        } else if results.isEmpty {
+        } else if !hasSearchResults {
+            // Haven't received any search results yet
             emptyStateView
+        } else if results.isEmpty {
+            // Received search results but they're empty
+            noResultsView
         } else {
+            // Have results to display
             resultsList
         }
     }
 
     private var emptyStateView: some View {
         VStack(spacing: 24) {
-            Image(systemName: searchViewModel.searchText.isEmpty ? "magnifyingglass" : "doc.text.magnifyingglass")
-                .font(.system(size: searchViewModel.searchText.isEmpty ? 48 : 36, weight: .light))
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 48, weight: .light))
                 .foregroundColor(SeekTheme.appTextTertiary)
 
             VStack(spacing: 8) {
-                Text(searchViewModel.searchText.isEmpty ? "Start searching" : "No files found")
+                Text("Start searching")
                     .font(.system(size: 18, weight: .medium))
                     .foregroundColor(SeekTheme.appTextSecondary)
 
-                Text(searchViewModel.searchText.isEmpty
-                     ? "Type in the search field to find files and folders"
-                     : searchTime > 0 ? "Searched in \(String(format: "%.2f", searchTime))s" : "")
+                Text("Type in the search field to find files and folders")
+                    .font(.system(size: 14))
+                    .foregroundColor(SeekTheme.appTextTertiary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var noResultsView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 48, weight: .light))
+                .foregroundColor(SeekTheme.appTextTertiary)
+            
+            VStack(spacing: 8) {
+                Text("No files found")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(SeekTheme.appTextSecondary)
+
+                Text("There doesn't appear to be any files matching your search")
                     .font(.system(size: 14))
                     .foregroundColor(SeekTheme.appTextTertiary)
                     .multilineTextAlignment(.center)
@@ -137,69 +137,45 @@ struct SearchView: View {
     }
 
     private var resultsList: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0, pinnedViews: []) {
-                    // Results header
-                    HStack {
-                        Text("\(results.count) result\(results.count == 1 ? "" : "s")")
-                            .font(.caption)
-                            .foregroundColor(SeekTheme.appTextSecondary)
-
-                        Text("•")
-                            .font(.caption)
-                            .foregroundColor(SeekTheme.appTextTertiary)
-
-                        Text("\(String(format: "%.2f", searchTime))s")
-                            .font(.caption)
-                            .foregroundColor(SeekTheme.appTextTertiary)
-
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
-
-                    // Results list
-                    ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
-                        SearchResultItem(
-                            fileEntry: result,
-                            searchViewModel: searchViewModel,
-                            isSelected: selectedIndex == index,
-                            action: {
-                                selectedIndex = index
-                                NSWorkspace.shared.open(URL(fileURLWithPath: result.fullPath))
-                            }
-                        )
-                        .id(result.id) // Use the file ID for scrolling
-                        .padding(.horizontal)
-                        .padding(.vertical, 2)
-                    }
-                }
+        SearchResultsList(
+            results: results,
+            searchTime: searchTime,
+            selectedIndex: selectedIndex,
+            searchViewModel: searchViewModel,
+            onItemSelected: { index, result in
+                logger.debug("SearchView: Item selected at index \(index): '\(result.fullPath)'")
+                selectedIndex = index
+                let url = URL(fileURLWithPath: result.fullPath)
+                logger.debug("SearchView: Opening URL: \(url)")
+                NSWorkspace.shared.open(url)
             }
-            .scrollIndicators(.visible)
-            .onChange(of: selectedIndex) { _, newIndex in
-                if let newIndex = newIndex, newIndex < results.count {
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        proxy.scrollTo(results[newIndex].id, anchor: .center)
-                    }
-                }
-            }
-        }
+        )
     }
 
     // MARK: - Setup and Actions
     private func setupSearchCallback() {
+        logger.debug("SearchView: Setting up search callback")
         searchViewModel.onResultsChanged = { results, searchTime, error in
+            logger.debug("SearchView: Received search results callback - \(results.count) results, time: \(searchTime)s, error: \(error ?? "none")")
+
             // Use async dispatch to avoid "Publishing changes from within view updates" error
             Task { @MainActor in
-                withAnimation(.easeInOut(duration: 0.4)) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    self.logger.debug("SearchView: Updating UI with new results")
                     self.results = results
                     self.searchTime = searchTime
                     self.errorMessage = error
+
+                    // Mark that we've received search results
+                    if !self.searchViewModel.searchText.isEmpty {
+                        self.hasSearchResults = true
+                        self.logger.debug("SearchView: Search results received, hasSearchResults set to true")
+                    }
                 }
 
                 // Maintain focus after search completes
                 if !self.isSearchFocused {
+                    self.logger.debug("SearchView: Restoring search focus")
                     self.isSearchFocused = true
                 }
             }
@@ -207,103 +183,33 @@ struct SearchView: View {
     }
 
     private func navigateResults(direction: Int) {
-        guard !results.isEmpty else { return }
+        guard !results.isEmpty else {
+            logger.debug("SearchView: Cannot navigate, results are empty")
+            return
+        }
 
         if let current = selectedIndex {
-            selectedIndex = min(max(0, current + direction), results.count - 1)
+            let newIndex = min(max(0, current + direction), results.count - 1)
+            logger.debug("SearchView: Navigating from index \(current) to \(newIndex)")
+            selectedIndex = newIndex
         } else {
-            selectedIndex = direction > 0 ? 0 : results.count - 1
+            let newIndex = direction > 0 ? 0 : results.count - 1
+            logger.debug("SearchView: Setting initial selection to index \(newIndex)")
+            selectedIndex = newIndex
         }
     }
 
     private func openSelectedFile() {
         if let index = selectedIndex, index < results.count {
-            NSWorkspace.shared.open(URL(fileURLWithPath: results[index].fullPath))
+            let path = results[index].fullPath
+            logger.debug("SearchView: Opening selected file at index \(index): '\(path)'")
+            NSWorkspace.shared.open(URL(fileURLWithPath: path))
+        } else {
+            logger.debug("SearchView: No file selected to open")
         }
     }
 }
 
-// MARK: - Search Result Item
-struct SearchResultItem: View {
-    let fileEntry: FileEntry
-    @ObservedObject var searchViewModel: SearchViewModel
-    let isSelected: Bool
-    let action: () -> Void
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(nsImage: searchViewModel.icon(for: fileEntry.fullPath))
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(fileEntry.name)
-                        .foregroundColor(SeekTheme.appTextPrimary)
-                        .font(.system(size: 14, weight: .medium))
-                        .lineLimit(1)
-
-                    Text(fileEntry.fullPath)
-                        .foregroundColor(SeekTheme.appTextSecondary)
-                        .font(.system(size: 12))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    if let formattedSize = fileEntry.formattedSize {
-                        Text(formattedSize)
-                            .foregroundColor(SeekTheme.appTextTertiary)
-                            .font(.system(size: 11))
-                    }
-
-                    Text(relativeDateString)
-                        .foregroundColor(SeekTheme.appTextTertiary)
-                        .font(.system(size: 11))
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
-        .background(backgroundColor)
-        .cornerRadius(8)
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .contextMenu {
-            Button("Open") { action() }
-            Button("Show in Finder") {
-                NSWorkspace.shared.selectFile(fileEntry.fullPath, inFileViewerRootedAtPath: "")
-            }
-            Divider()
-            Button("Copy Path") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(fileEntry.fullPath, forType: .string)
-            }
-        }
-    }
-
-    private var backgroundColor: Color {
-        if isSelected {
-            return SeekTheme.appSelection
-        } else if isHovered {
-            return SeekTheme.appHover
-        }
-        return Color.clear
-    }
-
-    private var relativeDateString: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: fileEntry.dateModifiedAsDate, relativeTo: Date())
-    }
-}
 
 #Preview {
     SearchView(isSidebarVisible: true)

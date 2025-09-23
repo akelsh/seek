@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MainAppView: View {
-    @State private var selectedView: MainView = .search
+    @State private var selectedView: MainViewType = .search
     @State private var columnVisibility = NavigationSplitViewVisibility.all
 
     var body: some View {
@@ -62,19 +62,6 @@ struct MainAppView: View {
     }
 }
 
-enum MainView: String, CaseIterable {
-    case search = "Search"
-    case settings = "Settings"
-    case help = "Help"
-
-    var icon: String {
-        switch self {
-        case .search: return "magnifyingglass"
-        case .settings: return "gear"
-        case .help: return "questionmark.circle"
-        }
-    }
-}
 
 
 #Preview {
