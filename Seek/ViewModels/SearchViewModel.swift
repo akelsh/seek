@@ -18,6 +18,7 @@ class SearchViewModel: ObservableObject {
 
     // Icon cache - not published to avoid view updates
     private var iconCache: [String: NSImage] = [:]
+    private let iconCacheQueue = DispatchQueue(label: "com.seek.iconCache", attributes: .concurrent)
 
     // MARK: - Initialization
     init() {
@@ -33,15 +34,27 @@ class SearchViewModel: ObservableObject {
 
     func icon(for path: String) -> NSImage {
         // Ensure path is a proper string to avoid NSNumber crashes
-        let safePath = String(describing: path)
-
-        if let cached = iconCache[safePath] {
-            return cached
+        guard !path.isEmpty else {
+            return NSWorkspace.shared.icon(forFileType: "public.data")
         }
 
-        let icon = NSWorkspace.shared.icon(forFile: safePath)
-        iconCache[safePath] = icon
-        return icon
+        let safePath = String(describing: path)
+
+        // Additional safety check - ensure it's really a string
+        guard safePath.isValidFilePath else {
+            return NSWorkspace.shared.icon(forFileType: "public.data")
+        }
+
+        // Thread-safe cache access
+        return iconCacheQueue.sync {
+            if let cached = iconCache[safePath] {
+                return cached
+            }
+
+            let icon = NSWorkspace.shared.icon(forFile: safePath)
+            iconCache[safePath] = icon
+            return icon
+        }
     }
 
     // MARK: - Private Methods
@@ -110,11 +123,26 @@ class SearchViewModel: ObservableObject {
         iconLoadingQueue.async { [weak self] in
             for entry in entries.prefix(50) { // Limit to first 50 for performance
                 guard let self = self else { break }
-                if self.iconCache[entry.fullPath] == nil {
-                    let icon = NSWorkspace.shared.icon(forFile: entry.fullPath)
-                    self.iconCache[entry.fullPath] = icon
+
+                // Thread-safe cache check and update
+                self.iconCacheQueue.sync {
+                    if self.iconCache[entry.fullPath] == nil {
+                        let icon = NSWorkspace.shared.icon(forFile: entry.fullPath)
+                        self.iconCache[entry.fullPath] = icon
+                    }
                 }
             }
         }
+    }
+}
+
+// MARK: - String Extension for Path Validation
+private extension String {
+    var isValidFilePath: Bool {
+        // Basic validation to ensure it's a valid file path string
+        return !isEmpty &&
+               !contains("\0") &&
+               (hasPrefix("/") || hasPrefix("~")) &&
+               !hasPrefix("0x") // Avoid hex addresses that might be passed accidentally
     }
 }
