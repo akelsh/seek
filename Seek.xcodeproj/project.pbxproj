@@ -10,30 +10,14 @@
 		E01296CC2E7829F30053B4B3 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = E01296CB2E7829F30053B4B3 /* SQLite */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		E012970E2E7836BE0053B4B3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E01296A52E78252B0053B4B3 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = E01296AC2E78252B0053B4B3;
-			remoteInfo = Seek;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		E01296AD2E78252B0053B4B3 /* Seek.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Seek.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E012970A2E7836BE0053B4B3 /* SeekTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SeekTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E01296AF2E78252B0053B4B3 /* Seek */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Seek;
-			sourceTree = "<group>";
-		};
-		E012970B2E7836BE0053B4B3 /* SeekTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SeekTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -47,13 +31,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E01297072E7836BE0053B4B3 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -61,7 +38,6 @@
 			isa = PBXGroup;
 			children = (
 				E01296AF2E78252B0053B4B3 /* Seek */,
-				E012970B2E7836BE0053B4B3 /* SeekTests */,
 				E01296AE2E78252B0053B4B3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -70,7 +46,6 @@
 			isa = PBXGroup;
 			children = (
 				E01296AD2E78252B0053B4B3 /* Seek.app */,
-				E012970A2E7836BE0053B4B3 /* SeekTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -101,29 +76,6 @@
 			productReference = E01296AD2E78252B0053B4B3 /* Seek.app */;
 			productType = "com.apple.product-type.application";
 		};
-		E01297092E7836BE0053B4B3 /* SeekTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E01297122E7836BE0053B4B3 /* Build configuration list for PBXNativeTarget "SeekTests" */;
-			buildPhases = (
-				E01297062E7836BE0053B4B3 /* Sources */,
-				E01297072E7836BE0053B4B3 /* Frameworks */,
-				E01297082E7836BE0053B4B3 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				E012970F2E7836BE0053B4B3 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				E012970B2E7836BE0053B4B3 /* SeekTests */,
-			);
-			name = SeekTests;
-			packageProductDependencies = (
-			);
-			productName = SeekTests;
-			productReference = E012970A2E7836BE0053B4B3 /* SeekTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -136,10 +88,6 @@
 				TargetAttributes = {
 					E01296AC2E78252B0053B4B3 = {
 						CreatedOnToolsVersion = 16.4;
-					};
-					E01297092E7836BE0053B4B3 = {
-						CreatedOnToolsVersion = 16.4;
-						TestTargetID = E01296AC2E78252B0053B4B3;
 					};
 				};
 			};
@@ -161,20 +109,12 @@
 			projectRoot = "";
 			targets = (
 				E01296AC2E78252B0053B4B3 /* Seek */,
-				E01297092E7836BE0053B4B3 /* SeekTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		E01296AB2E78252B0053B4B3 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E01297082E7836BE0053B4B3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -191,22 +131,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E01297062E7836BE0053B4B3 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		E012970F2E7836BE0053B4B3 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = E01296AC2E78252B0053B4B3 /* Seek */;
-			targetProxy = E012970E2E7836BE0053B4B3 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		E01296B72E78252C0053B4B3 /* Debug */ = {
@@ -338,7 +263,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Seek/App/Seek.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Seek/Seek.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -378,7 +303,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Seek/App/Seek.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Seek/Seek.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -413,42 +338,6 @@
 			};
 			name = Release;
 		};
-		E01297102E7836BE0053B4B3 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = 9A8X9676LC;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.akelsh.SeekTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Seek.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Seek";
-			};
-			name = Debug;
-		};
-		E01297112E7836BE0053B4B3 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = 9A8X9676LC;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.akelsh.SeekTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Seek.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Seek";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -466,15 +355,6 @@
 			buildConfigurations = (
 				E01296BA2E78252C0053B4B3 /* Debug */,
 				E01296BB2E78252C0053B4B3 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		E01297122E7836BE0053B4B3 /* Build configuration list for PBXNativeTarget "SeekTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				E01297102E7836BE0053B4B3 /* Debug */,
-				E01297112E7836BE0053B4B3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

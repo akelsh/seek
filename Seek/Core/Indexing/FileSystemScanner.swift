@@ -15,13 +15,10 @@ class FileSystemScanner {
         }
     }
 
-    /// Get FileManager enumeration options based on configuration
+    /// Get FileManager enumeration options
     static func getEnumerationOptions() -> FileManager.DirectoryEnumerationOptions {
-        var options: FileManager.DirectoryEnumerationOptions = [.skipsPackageDescendants]
-        if SeekConfig.Indexing.FileExclusion.excludeHiddenFiles {
-            options.insert(.skipsHiddenFiles)
-        }
-        return options
+        // Always include hidden files, skip package descendants
+        return [.skipsPackageDescendants]
     }
 
     /// Scan only root-level files (non-recursive) at the given URL

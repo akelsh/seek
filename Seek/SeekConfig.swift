@@ -1,11 +1,13 @@
 import Foundation
 
 enum SeekConfig {
-
+    
+    // ------------------------------
     // MARK: - Database Configuration
+    // ------------------------------
 
     enum Database {
-        static let fileName = "seek.db"
+        static let fileName = "file_indexing_table.db"
         static let appName = "Seek"
 
         // Connection settings
@@ -15,24 +17,24 @@ enum SeekConfig {
         enum WriteConnection {
             static let synchronous = "NORMAL"
             static let journalMode = "WAL"
-            static let cacheSize = -64000  // 64MB in KB (negative for KB)
+            static let cacheSize = -64_000  // 64MB in KB (negative for KB)
             static let tempStore = "MEMORY"
-            static let mmapSize: Int64 = 30000000000  // 30GB
-            static let walAutocheckpoint = 10000
+            static let mmapSize: Int64 = 30_000_000_000  // 30GB
+            static let walAutocheckpoint = 10_000
         }
 
         // Read connection PRAGMA settings
         enum ReadConnection {
-            static let cacheSize = -200000  // 200MB in KB
+            static let cacheSize = -200_000  // 200MB in KB
             static let tempStore = "MEMORY"
         }
 
         // Bulk indexing PRAGMA settings
         enum BulkIndexing {
             static let synchronous = "OFF"
-            static let cacheSize = -256000  // 256MB in KB
+            static let cacheSize = -256_000  // 256MB in KB
             static let tempStore = "MEMORY"
-            static let mmapSize: Int64 = 2147483648  // 2GB
+            static let mmapSize: Int64 = 2_147_483_648  // 2GB
         }
 
         // Queue configuration
@@ -74,11 +76,13 @@ enum SeekConfig {
         // Search limits
         static let defaultSearchLimit = 1000
     }
-
+    
+    // ------------------------------
     // MARK: - Indexing Configuration
+    // ------------------------------
 
     enum Indexing {
-        static let batchSize = 50000
+        static let batchSize = 50_000
 
         // Single root scanning - let work queue handle distribution
         static let defaultScanPaths = ["/"]
@@ -99,22 +103,20 @@ enum SeekConfig {
             .isSymbolicLinkKey,
             .fileResourceIdentifierKey
         ]
-
-        // File exclusion settings
-        enum FileExclusion {
-            static let excludeHiddenFiles = false  // Include hidden files by default
-            static let excludeDevelopmentDirs = true
-        }
     }
-
+    
+    // ---------------------------------
     // MARK: - Application Configuration
+    // ---------------------------------
 
     enum App {
         static let applicationSupportSubdirectory = "Seek"
     }
 }
 
+// ---------------------------
 // MARK: - Computed Properties
+// ---------------------------
 
 extension SeekConfig.Database {
     static var databasePath: String {

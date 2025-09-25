@@ -4,8 +4,10 @@ import SQLite
 class DatabaseService {
 
     private let logger = LoggingService.shared
-
+    
+    // ------------------
     // MARK: - Properties
+    // ------------------
 
     // Table definition
     private let fileEntries = Table(SeekConfig.Database.Tables.fileEntries)
@@ -34,11 +36,13 @@ class DatabaseService {
     // Path to the sqlite database
     private let dbPath: String
 
+    // ----------------------
     // MARK: - Initialization
+    // ----------------------
 
     private init() {
 
-        // Create Seek directory if it doesn't exist
+        // Create app support directory if it doesn't exist
 
         let seekDirectory = SeekConfig.Database.applicationSupportDirectory
 
@@ -61,8 +65,10 @@ class DatabaseService {
         // Prepare common statements
         prepareStatements()
     }
-
-    // MARK: - Setup Methods
+    
+    // ------------------------------
+    // MARK: - Initialization Methods
+    // ------------------------------
 
     private func setupConnections() {
         do {
@@ -215,17 +221,21 @@ class DatabaseService {
             logger.databaseError("Failed to prepare statements: \(error)")
         }
     }
-
+    
+    // -----------------------------
     // MARK: - Connection Management
+    // -----------------------------
 
-func closeConnections() {
+    func closeConnections() {
         searchStatement = nil
         extensionSearchStatement = nil
         readConnection = nil
         writeConnection = nil
     }
-
+    
+    // ---------------------------------
     // MARK: - Async Database Operations
+    // ---------------------------------
 
     func performRead<T>(_ operation: @escaping (Connection) throws -> T) async throws -> T {
         return try await withCheckedThrowingContinuation { continuation in
@@ -260,8 +270,10 @@ func closeConnections() {
             }
         }
     }
-
+    
+    // -----------------------
     // MARK: - Bulk Operations
+    // -----------------------
 
     func insertBatch(_ entries: [FileEntry]) async throws {
         try await performWrite { db in
@@ -325,8 +337,10 @@ func closeConnections() {
             return Int(count)
         }
     }
-
+    
+    // ---------------------------
     // MARK: - Incremental Updates
+    // ---------------------------
 
     /// Insert or update a single file entry
     func upsertEntry(_ entry: FileEntry) async throws {
@@ -351,8 +365,9 @@ func closeConnections() {
         }
     }
 
-
+    // -------------------------------
     // MARK: - Indexing Status Methods
+    // -------------------------------
 
     /// Check if the database has been indexed
     func isIndexed() async throws -> Bool {
@@ -431,9 +446,10 @@ func closeConnections() {
             try db.run(sql)
         }
     }
-
-
+    
+    // --------------------------------
     // MARK: - Smart Reindexing Methods
+    // --------------------------------
 
     /// Get all file paths currently in the database
     func getAllDatabasePaths() async throws -> Set<String> {
@@ -608,7 +624,9 @@ func closeConnections() {
     }
 }
 
+// -------------------
 // MARK: - Error Types
+// -------------------
 
 enum DatabaseError: Error {
     case connectionUnavailable
