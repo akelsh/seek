@@ -2,9 +2,11 @@ import Foundation
 import SQLite
 
 class SearchService {
-
+    
+    // ------------------
     // MARK: - Properties
-
+    // ------------------
+    
     private let databaseService = DatabaseService.shared
     private let queryParser = QueryParser()
     private let logger = LoggingService.shared
@@ -15,8 +17,10 @@ class SearchService {
         let totalCount: Int
         let searchTime: TimeInterval
     }
-
+    
+    // --------------------------
     // MARK: - Main Search Method
+    // --------------------------
 
     func search(query: String, limit: Int = SeekConfig.Database.defaultSearchLimit) async throws -> SearchResult {
         let startTime = Date()
@@ -24,7 +28,7 @@ class SearchService {
         logger.searchInfo("Search query: '\(query)'")
 
         // Parse query into expression
-        let expression = queryParser.parse(query)
+        let expression = try queryParser.parse(query)
         logger.searchDebug("Parsed expression")
 
         // Execute unified search
@@ -41,8 +45,9 @@ class SearchService {
         )
     }
 
-
+    // -----------------------------
     // MARK: - Unified Search Method
+    // -----------------------------
 
     /// Unified search - handles all query expressions
     private func searchWithExpression(expression: QueryParser.QueryExpression, limit: Int) async throws -> [FileEntry] {
@@ -127,98 +132,11 @@ class SearchService {
             return ("NOT (\(subQuery.whereClause))", subQuery.bindValues)
         }
     }
-
-    // MARK: - Legacy Extension Search (Keep for Optimization)
-
-    /// Search for files with a specific extension
-    func searchByExtension(_ extension: String, limit: Int = SeekConfig.Database.defaultSearchLimit) async throws -> SearchResult {
-        let startTime = Date()
-
-        let entries = try await databaseService.performRead { db in
-            let sql = 
-            """
-                SELECT
-                    name,
-                    full_path,
-                    is_directory,
-                    file_extension,
-                    size,
-                    date_modified
-                FROM file_entries
-                WHERE file_extension = ?
-                ORDER BY LENGTH(name), name
-                LIMIT ?
-            """
-
-            let statement = try db.prepare(sql)
-
-            var entries: [FileEntry] = []
-
-            let cleanExtension = `extension`.lowercased().replacingOccurrences(of: ".", with: "")
-
-            for row in try statement.run(cleanExtension, limit) {
-                let entry = FileEntry(
-                    name: row[0] as! String,
-                    fullPath: row[1] as! String,
-                    isDirectory: (row[2] as! Int64) != 0,
-                    fileExtension: row[3] as? String,
-                    size: row[4] as? Int64,
-                    dateModified: Date(timeIntervalSince1970: row[5] as! Double)
-                )
-                entries.append(entry)
-            }
-
-            return entries
-        }
-
-        let searchTime = Date().timeIntervalSince(startTime)
-
-        return SearchResult(
-            entries: entries,
-            totalCount: entries.count,
-            searchTime: searchTime
-        )
-    }
-
-    /// Get recently modified files
-    func getRecentFiles(limit: Int = 100) async throws -> [FileEntry] {
-        return try await databaseService.performRead { db in
-            let sql = 
-            """
-                SELECT
-                    name,
-                    full_path,
-                    is_directory,
-                    file_extension,
-                    size,
-                    date_modified
-                FROM file_entries
-                ORDER BY date_modified DESC
-                LIMIT ?
-            """
-
-            let statement = try db.prepare(sql)
-
-            var entries: [FileEntry] = []
-
-            for row in try statement.run(limit) {
-                let entry = FileEntry(
-                    name: row[0] as! String,
-                    fullPath: row[1] as! String,
-                    isDirectory: (row[2] as! Int64) != 0,
-                    fileExtension: row[3] as? String,
-                    size: row[4] as? Int64,
-                    dateModified: Date(timeIntervalSince1970: row[5] as! Double)
-                )
-                entries.append(entry)
-            }
-
-            return entries
-        }
-    }
 }
 
+// -------------------------
 // MARK: - Search Statistics
+// -------------------------
 
 extension SearchService {
 

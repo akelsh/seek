@@ -28,7 +28,10 @@ struct Sidebar: View {
         }
     }
     
+    // ----------------------------
     // MARK: - Quick Access Section
+    // ----------------------------
+    
     private var quickAccessSection: some View {
         CollapsibleSection(
             title: "Quick Access",
@@ -44,7 +47,6 @@ struct Sidebar: View {
                     title: "Recent Searches",
                     badge: "5"
                 ) {
-                    // TODO: Implement recent searches
                 }
                 
                 SidebarItem(
@@ -57,7 +59,10 @@ struct Sidebar: View {
         }
     }
     
+    // -------------------------
     // MARK: - Locations Section
+    // -------------------------
+    
     private var locationsSection: some View {
         CollapsibleSection(
             title: "Locations",
@@ -84,7 +89,10 @@ struct Sidebar: View {
         }
     }
     
+    // -------------------------
     // MARK: - Filter By Section
+    // -------------------------
+    
     private var filterBySection: some View {
         CollapsibleSection(
             title: "Filter By",
@@ -149,7 +157,10 @@ struct Sidebar: View {
         }
     }
     
+    // --------------------------
     // MARK: - Navigation Section
+    // --------------------------
+    
     private var navigationSection: some View {
         VStack(spacing: SeekTheme.spacingXSmall) {
             NavigationButton(
@@ -180,7 +191,10 @@ struct Sidebar: View {
     }
 }
 
+// ----------------------
 // MARK: - Section Header
+// ----------------------
+
 struct SectionHeader: View {
     let title: String
     
@@ -192,7 +206,10 @@ struct SectionHeader: View {
     }
 }
 
+// -------------------------
 // MARK: - Navigation Button
+// -------------------------
+
 struct NavigationButton: View {
     let icon: String
     let title: String
@@ -220,7 +237,10 @@ struct NavigationButton: View {
     }
 }
 
+// ---------------------------
 // MARK: - Custom Button Style
+// ---------------------------
+
 struct SidebarButtonStyle: ButtonStyle {
     let isSelected: Bool
     @State private var isHovered = false
@@ -247,7 +267,10 @@ struct SidebarButtonStyle: ButtonStyle {
     }
 }
 
+// ---------------------------
 // MARK: - Collapsible Section
+// ---------------------------
+
 struct CollapsibleSection<Content: View>: View {
     let title: String
     @Binding var isExpanded: Bool
@@ -298,7 +321,10 @@ struct CollapsibleSection<Content: View>: View {
     }
 }
 
+// --------------------
 // MARK: - Sidebar Item
+// --------------------
+
 struct SidebarItem: View {
     let icon: String
     let title: String

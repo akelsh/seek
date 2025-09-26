@@ -1,6 +1,8 @@
 import Foundation
 
+// ------------------------------------
 // MARK: - Array Extension for Chunking
+// ------------------------------------
 
 extension Array {
     /// Split array into chunks of specified size

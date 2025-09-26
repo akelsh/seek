@@ -6,7 +6,19 @@ class IndexingService {
     private let databaseService = DatabaseService.shared
     private let logger = LoggingService.shared
 
+    // Progress reporting
+    typealias ProgressCallback = (Double, Int, Int, String?) async -> Void
+    private var progressCallback: ProgressCallback?
+    
+    // ----------------------
     // MARK: - Public Methods
+    // ----------------------
+
+    /// Set progress callback for indexing operations
+    /// - Parameter callback: Called with (progress: Double, filesProcessed: Int, totalFiles: Int, message: String?)
+    func setProgressCallback(_ callback: @escaping ProgressCallback) {
+        self.progressCallback = callback
+    }
 
     /// Perform smart indexing - either full or incremental based on database state
     /// - Parameter scanPaths: Root paths to scan (defaults to config)
@@ -39,8 +51,10 @@ class IndexingService {
         logger.indexingInfo("Starting full indexing")
         let stats = IndexingStatistics()
 
-        // Start by clearing out the database if needed
+        // Report initial progress
+        await progressCallback?(0.0, 0, 0, "Preparing database...")
 
+        // Start by clearing out the database if needed
         let existingCount = try await databaseService.getFileCount()
 
         if existingCount > 0 {
@@ -55,40 +69,49 @@ class IndexingService {
         // We first prepare the database.
 
         // Begin bulk indexing
+        await progressCallback?(0.1, 0, 0, "Starting file scan...")
         try await databaseService.beginBulkIndexing()
 
-        // Next, we start the bulk indexing from the scan paths and let 
+        // Next, we start the bulk indexing from the scan paths and let
         // concurrency and recursion handle the rest.
 
         // Process all scan paths
         var totalCount = 0
-        for rootPath in scanPaths {
+        for (index, rootPath) in scanPaths.enumerated() {
             guard FileManager.default.fileExists(atPath: rootPath) else {
                 logger.indexingInfo("Skipping non-existent path: \(rootPath)")
                 continue
             }
 
             let rootURL = URL(fileURLWithPath: rootPath)
-            totalCount += try await indexRootPath(rootURL, stats: stats)
+
+            // Report progress for each root path
+            let baseProgress = Double(index) / Double(scanPaths.count) * 0.8 + 0.1  // Reserve 0.1-0.9 for scanning
+            await progressCallback?(baseProgress, totalCount, 0, "Scanning \(rootURL.lastPathComponent)...")
+
+            totalCount += try await indexRootPath(rootURL, stats: stats, baseProgress: baseProgress, progressWeight: 0.8 / Double(scanPaths.count))
         }
 
-        // Finally, we commit and update the medata.
+        // Finally, we commit and update the metadata.
 
         // Commit and update metadata
+        await progressCallback?(0.9, totalCount, totalCount, "Finalizing database...")
         try await databaseService.commitBulkIndexing()
         let dbCount = try await databaseService.getFileCount()
         try await databaseService.markAsIndexed(paths: scanPaths, fileCount: dbCount)
 
         // At this point, we are done.
+        await progressCallback?(1.0, dbCount, dbCount, "Indexing complete!")
 
         stats.printFullIndexingStats(totalCount: totalCount, dbCount: dbCount)
     }
 
-
+    // -----------------------
     // MARK: - Private Methods
+    // -----------------------
 
     /// Index a single root path and all its contents
-    private func indexRootPath(_ rootURL: URL, stats: IndexingStatistics) async throws -> Int {
+    private func indexRootPath(_ rootURL: URL, stats: IndexingStatistics, baseProgress: Double = 0.0, progressWeight: Double = 1.0) async throws -> Int {
         var totalCount = 0
         logger.indexingInfo("Indexing: \(rootURL.path)")
 

@@ -4,27 +4,43 @@ import AppKit
 
 @MainActor
 class SearchViewModel: ObservableObject {
+    
+    // --------------------------------------------------
     // MARK: - Published Properties (only for UI binding)
+    // --------------------------------------------------
+    
     @Published var searchText = ""
-
+    
+    // --------------------------------------------------------
     // MARK: - Callbacks (to avoid @Published rebuilding views)
+    // --------------------------------------------------------
+    
     var onResultsChanged: (([FileEntry], TimeInterval, String?) -> Void)?
-
+    
+    // --------------------------
     // MARK: - Private Properties
+    // --------------------------
+    
     private let searchService = SearchService()
     private var searchTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
     private let iconCacheService = IconCacheService.shared
     private let logger = LoggingService.shared
-
+    
+    // ----------------------
     // MARK: - Initialization
+    // ----------------------
+    
     init() {
         logger.debug("SearchViewModel: Initializing")
         setupSearchTextObserver()
         logger.debug("SearchViewModel: Initialization complete")
     }
-
+    
+    // ----------------------
     // MARK: - Public Methods
+    // ----------------------
+    
     func clearSearch() {
         logger.debug("SearchViewModel: Clearing search")
         searchText = ""
@@ -45,8 +61,11 @@ class SearchViewModel: ObservableObject {
     func icon(for path: String) -> NSImage {
         return iconCacheService.icon(for: path)
     }
-
+    
+    // -----------------------
     // MARK: - Private Methods
+    // -----------------------
+    
     private func setupSearchTextObserver() {
         logger.debug("SearchViewModel: Setting up search text observer with 100ms debounce")
         $searchText
@@ -105,7 +124,7 @@ class SearchViewModel: ObservableObject {
                 logger.debug("SearchViewModel: Search completed in \(searchTime)s, found \(result.entries.count) results")
 
                 await MainActor.run {
-                    logger.debug("SearchViewModel: Notifying view with \(result.entries.count) results")
+                    self.logger.debug("SearchViewModel: Notifying view with \(result.entries.count) results")
                     // Notify view with results via callback (not @Published)
                     self.onResultsChanged?(result.entries, searchTime, nil)
                 }
@@ -118,7 +137,7 @@ class SearchViewModel: ObservableObject {
                 logger.error("SearchViewModel: Search failed with error: \(error)")
                 // Check if task was cancelled
                 guard !Task.isCancelled else {
-                    logger.debug("SearchViewModel: Task was cancelled after error, exiting")
+                    self.logger.debug("SearchViewModel: Task was cancelled after error, exiting")
                     return
                 }
 
@@ -126,7 +145,7 @@ class SearchViewModel: ObservableObject {
                 let searchTime = endTime - startTime
 
                 await MainActor.run {
-                    logger.debug("SearchViewModel: Notifying view with error message")
+                    self.logger.debug("SearchViewModel: Notifying view with error message")
                     // Notify view with error via callback
                     self.onResultsChanged?([], searchTime, "Search failed: \(error.localizedDescription)")
                 }

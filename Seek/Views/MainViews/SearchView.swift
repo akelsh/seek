@@ -70,9 +70,11 @@ struct SearchView: View {
             return .handled
         }
     }
-
-
+    
+    // --------------------
     // MARK: - Results Area
+    // --------------------
+    
     @ViewBuilder
     private var resultsArea: some View {
         if isRefreshing {
@@ -180,8 +182,11 @@ struct SearchView: View {
             }
         )
     }
-
+    
+    // -------------------------
     // MARK: - Setup and Actions
+    // -------------------------
+    
     private func setupSearchCallback() {
         logger.debug("SearchView: Setting up search callback")
         searchViewModel.onResultsChanged = { results, searchTime, error in
