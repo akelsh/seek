@@ -2,11 +2,11 @@ import Foundation
 import SQLite
 
 class SearchService {
-    
+
     // ------------------
     // MARK: - Properties
     // ------------------
-    
+
     private let databaseService = DatabaseService.shared
     private let queryParser = QueryParser()
     private let logger = LoggingService.shared
@@ -17,7 +17,18 @@ class SearchService {
         let totalCount: Int
         let searchTime: TimeInterval
     }
-    
+
+    /// Search strategy for optimal query routing
+    ///
+    /// This enum determines whether to use fast FTS (Full-Text Search) or accurate LIKE queries
+    /// based on the complexity of the search pattern:
+    /// - FTS: Used for simple terms and prefix patterns (fast, indexed)
+    /// - LIKE: Used for complex wildcards that FTS cannot handle (accurate, flexible)
+    private enum SearchStrategy {
+        case fts(query: String)      // Use FTS MATCH for fast token search
+        case like(pattern: String)   // Use LIKE for accurate wildcard matching
+    }
+
     // --------------------------
     // MARK: - Main Search Method
     // --------------------------
@@ -49,12 +60,122 @@ class SearchService {
     // MARK: - Unified Search Method
     // -----------------------------
 
-    /// Unified search - handles all query expressions
+    /// Unified search - intelligently routes queries for optimal performance
     private func searchWithExpression(expression: QueryParser.QueryExpression, limit: Int) async throws -> [FileEntry] {
+        // Use strategy-based routing: FTS for simple/prefix patterns, LIKE for complex wildcards
+        switch expression {
+        case .term(let term):
+            // Handle wildcards and special cases
+            if term.isEmpty {
+                return []
+            }
+
+            // Handle quoted terms (exact match) - use fallback for now
+            if term.hasPrefix("\"") && term.hasSuffix("\"") {
+                return try await searchWithExpressionFallback(expression: expression, limit: limit)
+            }
+
+            // Determine optimal search strategy based on pattern
+            let strategy = determineSearchStrategy(for: term)
+
+            switch strategy {
+            case .fts(let query):
+                // Use fast FTS for compatible patterns
+                return try await databaseService.searchFiles(query: query, limit: limit)
+
+            case .like(let pattern):
+                // Use LIKE for wildcard patterns requiring substring matching
+                // Create a term expression with the converted pattern
+                let likeExpression = QueryParser.QueryExpression.term(pattern)
+                return try await searchWithExpressionFallback(expression: likeExpression, limit: limit)
+            }
+
+        case .and(_):
+            // Complex boolean queries use SQL for accurate logical operations
+            return try await searchWithExpressionFallback(expression: expression, limit: limit)
+
+        case .or(_):
+            // Complex boolean queries use SQL for accurate logical operations
+            return try await searchWithExpressionFallback(expression: expression, limit: limit)
+
+        case .not(let expression):
+            // Negation queries use SQL for accurate logical operations
+            return try await searchWithExpressionFallback(expression: expression, limit: limit)
+
+        case .keyValue(let key, let value):
+            // Handle common key-value searches
+            switch key.lowercased() {
+            case "type", "filetype":
+                // Use the comprehensive type query handling from buildKeyValueQuery
+                let typeExpression = QueryParser.QueryExpression.keyValue(key: "type", value: value)
+                return try await searchWithExpressionFallback(expression: typeExpression, limit: limit)
+            default:
+                // Treat other key-value pairs as regular search
+                return try await databaseService.searchFiles(query: "\(key):\(value)", limit: limit)
+            }
+        }
+    }
+
+    // ----------------------------------------
+    // MARK: - Search Strategy Determination
+    // ----------------------------------------
+
+    /// Determine optimal search strategy based on search pattern
+    ///
+    /// This function analyzes the search pattern and routes it to the most appropriate search method:
+    ///
+    /// **LIKE Strategy (Accurate):**
+    /// - Leading wildcards: `*file`, `*.app`, `*_index`
+    /// - Question marks: `test?`, `file?.txt`
+    /// - Complex patterns: `test*file`, `*middle*`
+    ///
+    /// **FTS Strategy (Fast):**
+    /// - Simple terms: `test` → `test*` (prefix search)
+    /// - Prefix patterns: `test*` (native FTS support)
+    ///
+    /// @param term The search term to analyze
+    /// @returns SearchStrategy indicating which method to use
+    private func determineSearchStrategy(for term: String) -> SearchStrategy {
+        // Handle empty terms
+        if term.isEmpty {
+            return .fts(query: "")
+        }
+
+        // Check for wildcard patterns that require LIKE
+        if term.hasPrefix("*") {
+            // Leading wildcard patterns like "*file", "*_index", "*.app" require LIKE
+            // FTS can't handle leading wildcards efficiently
+            return .like(pattern: term)
+        }
+
+        if term.contains("?") {
+            // Question mark wildcards require LIKE conversion
+            return .like(pattern: term)
+        }
+
+        if term.contains("*") && !term.hasSuffix("*") {
+            // Middle or complex wildcard patterns like "test*file" require LIKE
+            // FTS only supports prefix matching (term*)
+            return .like(pattern: term)
+        }
+
+        // FTS-compatible patterns
+        if term.hasSuffix("*") {
+            // Prefix patterns like "test*" - FTS handles these efficiently
+            return .fts(query: term)
+        } else {
+            // Simple terms - add asterisk for prefix matching to improve FTS performance
+            // This matches the user's expectation of finding files that start with the term
+            return .fts(query: "\(term)*")
+        }
+    }
+
+    /// SQL-based search for complex queries and accurate wildcard matching
+    private func searchWithExpressionFallback(expression: QueryParser.QueryExpression, limit: Int) async throws -> [FileEntry] {
         return try await databaseService.performRead { db in
             let (whereClause, bindValues) = self.buildQuery(expression)
 
-            let sql = 
+            let sql =
             """
                 SELECT name, full_path, is_directory, file_extension, size, date_modified
                 FROM file_entries
@@ -99,20 +220,14 @@ class SearchService {
                 return ("name = ? COLLATE NOCASE", [exact])
             }
 
-            // Handle wildcards
+            // Handle wildcards - convert to LIKE patterns
             if term.contains("*") || term.contains("?") {
                 var pattern = term.replacingOccurrences(of: "*", with: "%")
                 pattern = pattern.replacingOccurrences(of: "?", with: "_")
                 return ("name LIKE ? COLLATE NOCASE", [pattern])
-            }
-
-            // Handle prefix search (terms ending with * from parser)
-            if term.hasSuffix("*") {
-                let prefix = String(term.dropLast())
-                return ("name LIKE ? COLLATE NOCASE", ["\(prefix)%"])
             } else {
-                // Substring search for terms without * (implicit AND behavior)
-                return ("name LIKE ? COLLATE NOCASE", ["%\(term)%"])
+                // For simple terms, use prefix search for consistency with FTS strategy
+                return ("name LIKE ? COLLATE NOCASE", ["\(term)%"])
             }
 
         case .and(let expressions):
@@ -148,17 +263,17 @@ class SearchService {
 
         switch normalizedKey {
         case "name", "filename":
-            // Handle name searches
+            // Handle name searches with consistent wildcard handling
             if value.contains("*") || value.contains("?") {
                 var pattern = value.replacingOccurrences(of: "*", with: "%")
                 pattern = pattern.replacingOccurrences(of: "?", with: "_")
                 return ("name LIKE ? COLLATE NOCASE", [pattern])
             } else {
-                return ("name LIKE ? COLLATE NOCASE", ["%\(value)%"])
+                return ("name LIKE ? COLLATE NOCASE", ["\(value)%"])
             }
 
         case "path", "fullpath":
-            // Handle path searches
+            // Handle path searches with consistent wildcard handling
             if value.contains("*") || value.contains("?") {
                 var pattern = value.replacingOccurrences(of: "*", with: "%")
                 pattern = pattern.replacingOccurrences(of: "?", with: "_")

@@ -9,9 +9,8 @@ extension DatabaseService {
 
     /// Search for files by name using full-text search
     func searchFiles(query: String, limit: Int = SeekConfig.Database.defaultSearchLimit) async throws -> [FileEntry] {
-        // Sanitize query for FTS
-        let sanitizedQuery = query.replacingOccurrences(of: "\"", with: "\"\"")
-        let ftsQuery = "\(sanitizedQuery)*"
+        // Sanitize query for FTS and use exactly as provided (SearchService handles asterisk logic)
+        let ftsQuery = query.replacingOccurrences(of: "\"", with: "\"\"").trimmingCharacters(in: .whitespaces)
 
         return try await performRead { db in
             let sql = """
@@ -42,8 +41,8 @@ extension DatabaseService {
 
     /// Search for directories only
     func searchDirectories(query: String, limit: Int = SeekConfig.Database.defaultSearchLimit) async throws -> [FileEntry] {
-        let sanitizedQuery = query.replacingOccurrences(of: "\"", with: "\"\"")
-        let ftsQuery = "\(sanitizedQuery)*"
+        // Sanitize query for FTS and use exactly as provided (SearchService handles asterisk logic)
+        let ftsQuery = query.replacingOccurrences(of: "\"", with: "\"\"").trimmingCharacters(in: .whitespaces)
 
         return try await performRead { db in
             let sql = """
@@ -73,8 +72,8 @@ extension DatabaseService {
 
     /// Search for files only (no directories)
     func searchFilesOnly(query: String, limit: Int = SeekConfig.Database.defaultSearchLimit) async throws -> [FileEntry] {
-        let sanitizedQuery = query.replacingOccurrences(of: "\"", with: "\"\"")
-        let ftsQuery = "\(sanitizedQuery)*"
+        // Sanitize query for FTS and use exactly as provided (SearchService handles asterisk logic)
+        let ftsQuery = query.replacingOccurrences(of: "\"", with: "\"\"").trimmingCharacters(in: .whitespaces)
 
         return try await performRead { db in
             let sql = """
@@ -117,9 +116,10 @@ extension DatabaseService {
 
             // Build dynamic WHERE clause
             if let query = query, !query.isEmpty {
-                let sanitizedQuery = query.replacingOccurrences(of: "\"", with: "\"\"")
+                // Sanitize query for FTS and use exactly as provided (SearchService handles asterisk logic)
+                let ftsQuery = query.replacingOccurrences(of: "\"", with: "\"\"").trimmingCharacters(in: .whitespaces)
                 whereConditions.append("f.rowid IN (SELECT rowid FROM file_entries_fts WHERE name MATCH ?)")
-                parameters.append("\(sanitizedQuery)*")
+                parameters.append(ftsQuery)
             }
 
             if let ext = `extension` {
