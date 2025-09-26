@@ -83,16 +83,13 @@ extension FileSystemMonitor {
         let isRenamed = (flags & FSEventStreamEventFlags(kFSEventStreamEventFlagItemRenamed)) != 0
         let isModified = (flags & FSEventStreamEventFlags(kFSEventStreamEventFlagItemModified)) != 0
 
-        // Log file creation events for debugging
+        // File creation tracking (debug only)
         if isCreated {
-            logger.fileSystemInfo("FileSystemMonitor: File created: \(path)")
+            // Silent creation tracking
         }
 
         // Skip content-only modifications immediately to reduce overhead
         if !isCreated && !isRemoved && !isRenamed {
-            if isModified {
-                logger.fileSystemDebug("FileSystemMonitor: Skipping content-only modification: \(path)")
-            }
             return
         }
 
@@ -107,7 +104,6 @@ extension FileSystemMonitor {
         }
 
         // Queue the path for processing
-        logger.fileSystemInfo("FileSystemMonitor: Queuing path for update: \(path)")
         queuePathForUpdate(path)
     }
     

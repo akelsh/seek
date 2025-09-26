@@ -52,7 +52,7 @@ class IndexingService {
         let stats = IndexingStatistics()
 
         // Report initial progress
-        await progressCallback?(0.0, 0, 0, "Preparing database...")
+        await progressCallback?(0.0, 0, 0, "Getting things ready for you...")
 
         // Start by clearing out the database if needed
         let existingCount = try await databaseService.getFileCount()
@@ -69,7 +69,7 @@ class IndexingService {
         // We first prepare the database.
 
         // Begin bulk indexing
-        await progressCallback?(0.1, 0, 0, "Starting file scan...")
+        await progressCallback?(0.1, 0, 0, "Preparing your files...")
         try await databaseService.beginBulkIndexing()
 
         // Next, we start the bulk indexing from the scan paths and let
@@ -87,7 +87,7 @@ class IndexingService {
 
             // Report progress for each root path
             let baseProgress = Double(index) / Double(scanPaths.count) * 0.8 + 0.1  // Reserve 0.1-0.9 for scanning
-            await progressCallback?(baseProgress, totalCount, 0, "Scanning \(rootURL.lastPathComponent)...")
+            await progressCallback?(baseProgress, totalCount, 0, "Preparing your files...")
 
             totalCount += try await indexRootPath(rootURL, stats: stats, baseProgress: baseProgress, progressWeight: 0.8 / Double(scanPaths.count))
         }
@@ -95,13 +95,13 @@ class IndexingService {
         // Finally, we commit and update the metadata.
 
         // Commit and update metadata
-        await progressCallback?(0.9, totalCount, totalCount, "Finalizing database...")
+        await progressCallback?(0.9, totalCount, totalCount, "Almost there...")
         try await databaseService.commitBulkIndexing()
         let dbCount = try await databaseService.getFileCount()
         try await databaseService.markAsIndexed(paths: scanPaths, fileCount: dbCount)
 
         // At this point, we are done.
-        await progressCallback?(1.0, dbCount, dbCount, "Indexing complete!")
+        await progressCallback?(1.0, dbCount, dbCount, "All done!")
 
         stats.printFullIndexingStats(totalCount: totalCount, dbCount: dbCount)
     }

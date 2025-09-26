@@ -15,11 +15,22 @@ class AppStateManager: ObservableObject {
 
     // Indexing state tracking
     @Published var indexingProgress: Double = 0.0
-    @Published var indexingMessage: String = "Getting things ready for you..."
+    @Published var indexingMessage: String = AppStateManager.defaultIndexingMessage
     @Published var filesProcessed: Int = 0
     @Published var totalFiles: Int = 0
 
     private let indexingService = IndexingService()
+
+    // MARK: - Constants
+    private static let defaultIndexingMessage = "Getting things ready for you..."
+
+    // User-friendly indexing messages for different stages
+    private static let indexingMessages = [
+        "Getting things ready for you...",
+        "Preparing your files...",
+        "Almost there...",
+        "Finishing up..."
+    ]
 
     /// Check if user has completed onboarding
     private var hasCompletedOnboarding: Bool {
@@ -74,7 +85,7 @@ class AppStateManager: ObservableObject {
         await MainActor.run {
             currentState = .indexing
             indexingProgress = 0.0
-            indexingMessage = "Getting things ready for you..."
+            indexingMessage = AppStateManager.defaultIndexingMessage
             filesProcessed = 0
             totalFiles = 0
         }
@@ -86,7 +97,6 @@ class AppStateManager: ObservableObject {
             }
 
             // Start indexing with progress updates
-            await updateIndexingMessage("Scanning file system...")
             try await indexingService.performSmartIndexing()
 
             // Indexing complete, go to main app
@@ -106,8 +116,12 @@ class AppStateManager: ObservableObject {
             self.indexingProgress = progress
             self.filesProcessed = filesProcessed
             self.totalFiles = totalFiles
+
+            // Use provided message or generate a progress-based friendly message
             if let message = message {
                 self.indexingMessage = message
+            } else {
+                self.indexingMessage = AppStateManager.getProgressMessage(for: progress)
             }
         }
     }
@@ -130,5 +144,19 @@ class AppStateManager: ObservableObject {
     func resetToOnboarding() {
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
         currentState = .onboarding
+    }
+
+    /// Get a user-friendly message based on indexing progress
+    private static func getProgressMessage(for progress: Double) -> String {
+        switch progress {
+        case 0.0..<0.3:
+            return indexingMessages[0] // "Getting things ready for you..."
+        case 0.3..<0.7:
+            return indexingMessages[1] // "Preparing your files..."
+        case 0.7..<0.95:
+            return indexingMessages[2] // "Almost there..."
+        default:
+            return indexingMessages[3] // "Finishing up..."
+        }
     }
 }

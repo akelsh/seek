@@ -15,40 +15,34 @@ class FileEntryFactory {
         }
     }
 
-    /// Calculate the total size of a bundle (app, package, etc.) by recursively summing all contained files
-    private static func calculateBundleSize(for url: URL) -> Int64? {
-        return safeFileSystemOperation {
-            var totalSize: Int64 = 0
-
-            let fileManager = FileManager.default
-            guard let enumerator = fileManager.enumerator(
-                at: url,
-                includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey],
-                options: [.skipsHiddenFiles, .skipsPackageDescendants],
-                errorHandler: { (url, error) -> Bool in
-                    logger.error("Error enumerating bundle contents at \(url.path): \(error)")
-                    return true // Continue enumeration despite errors
-                }
-            ) else {
-                logger.error("Failed to create enumerator for bundle: \(url.path)")
-                return 0
-            }
-
-            for case let fileURL as URL in enumerator {
-                guard let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey]) else {
-                    continue
-                }
-
-                // Only count file sizes, not directories
-                if let isDirectory = resourceValues.isDirectory, !isDirectory,
-                   let fileSize = resourceValues.fileSize {
-                    totalSize += Int64(fileSize)
-                }
-            }
-
-            return totalSize
+    /// Get file size using the most reliable method
+    private static func getFileSize(for url: URL, resourceValues: URLResourceValues) -> Int64? {
+        // Method 1: Try the provided resourceValues first (fastest if it works)
+        if let fileSize = resourceValues.fileSize {
+            return Int64(fileSize)
         }
+
+        // Method 2: FileManager attributes (this has been working 100% of the time)
+        if let attributes = safeFileSystemOperation({
+            try FileManager.default.attributesOfItem(atPath: url.path)
+        }) {
+            if let fileSize = attributes[.size] as? NSNumber {
+                return fileSize.int64Value
+            }
+        }
+
+        // Method 3: Direct file URL resourceValues as final fallback
+        if let freshResourceValues = safeFileSystemOperation({
+            try url.resourceValues(forKeys: [.fileSizeKey])
+        }) {
+            if let fileSize = freshResourceValues.fileSize {
+                return Int64(fileSize)
+            }
+        }
+
+        return nil
     }
+
 
     /// Create a FileEntry from a URL and optional resource values
     static func createFileEntry(for url: URL, resources: URLResourceValues? = nil) -> FileEntry? {
@@ -69,18 +63,20 @@ class FileEntryFactory {
         let isDirectory = resourceValues.isDirectory ?? false
         let isPackage = resourceValues.isPackage ?? false
 
-        // Calculate size based on whether this is a package/bundle or regular file/directory
+        // Calculate size - use reliable method for both files and packages
         let size: Int64?
-        if isPackage && isDirectory {
-            // For app bundles and packages, calculate total size by summing all contained files
-            if let bundleSize = calculateBundleSize(for: url), bundleSize > 0 {
-                size = bundleSize
-            } else {
-                size = nil
-            }
+        if isDirectory && !isPackage {
+            // Only regular directories (not app bundles) get no size
+            size = nil
         } else {
-            // For regular files and directories, use the standard file size
-            size = resourceValues.fileSize.map { Int64($0) }
+            // For files AND packages (app bundles), use the reliable file size method
+            size = getFileSize(for: url, resourceValues: resourceValues)
+
+            if size == nil {
+                let fileExtension = url.pathExtension.isEmpty ? "no extension" : url.pathExtension
+                let itemType = isPackage ? "package" : "file"
+                logger.error("FileEntryFactory: Could not determine size for \(itemType): \(url.path) (extension: \(fileExtension))")
+            }
         }
 
         let fileExtension = isDirectory ? nil : url.pathExtension.isEmpty ? nil : url.pathExtension.lowercased()

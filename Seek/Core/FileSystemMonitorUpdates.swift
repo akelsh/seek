@@ -76,8 +76,19 @@ extension FileSystemMonitor {
                     if FileManager.default.fileExists(atPath: path) {
                         // File/directory exists - create or update entry
                         let url = URL(fileURLWithPath: path)
-                        if let entry = FileEntryFactory.createFileEntry(for: url) {
-                            entriesToUpsert.append(entry)
+
+                        // Pre-fetch resource values like the indexing process does
+                        do {
+                            let resources = try url.resourceValues(forKeys: Set(SeekConfig.Indexing.resourceKeys))
+
+                            if let entry = FileEntryFactory.createFileEntry(for: url, resources: resources) {
+                                entriesToUpsert.append(entry)
+                            }
+                        } catch {
+                            // Fallback to basic creation without resource values
+                            if let entry = FileEntryFactory.createFileEntry(for: url) {
+                                entriesToUpsert.append(entry)
+                            }
                         }
                     } else {
                         // File/directory was deleted
@@ -88,7 +99,7 @@ extension FileSystemMonitor {
                 // Batch database operations
                 try await performDatabaseUpdates(entriesToUpsert: entriesToUpsert, pathsToDelete: pathsToDelete)
 
-                logger.fileSystemInfo("Processed \(paths.count) file system changes: \(entriesToUpsert.count) upserts, \(pathsToDelete.count) deletions")
+                // Batch processed successfully
 
             } catch {
                 logger.fileSystemError("Error processing file system batch: \(error)")

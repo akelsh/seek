@@ -266,31 +266,31 @@ class SearchService {
             let imageExts = [
               // Common Web Formats
               "jpg", "jpeg", "png", "gif", "webp", "avif", "svg",
-              
+
               // Traditional Formats
               "bmp", "tiff", "tif", "ico", "cur",
-              
+
               // Professional/Raw Formats
               "raw", "cr2", "cr3", "nef", "arw", "dng", "orf", "rw2", "pef", "srw", "raf", "3fr", "fff", "dcr", "kdc", "srf", "mrw", "x3f",
-              
+
               // Adobe Formats
               "psd", "psb", "ai", "eps", "pdf",
-              
+
               // Other Graphics Software
               "xcf", "gimp", "kra", "ora", "clip", "sai", "mdp", "pdn",
-              
+
               // Apple Formats
               "heic", "heif", "heix",
-              
+
               // Legacy/Specialized
               "pcx", "tga", "dds", "exr", "hdr", "pic", "pict", "sgi", "iff", "lbm", "pbm", "pgm", "ppm", "pnm", "xbm", "xpm",
-              
+
               // Animation
               "apng", "flif",
-              
+
               // Medical/Scientific
               "dcm", "dicom", "fits", "fit",
-              
+
               // Game/3D
               "vtf", "tex", "ktx", "astc"
             ];

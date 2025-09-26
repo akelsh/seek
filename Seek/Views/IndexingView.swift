@@ -4,60 +4,42 @@ struct IndexingView: View {
     @ObservedObject var appStateManager: AppStateManager
 
     var body: some View {
-        VStack(spacing: SeekTheme.spacingLarge) {
-            Spacer()
+        ZStack {
+            // Background
+            SeekTheme.appBackground
+                .ignoresSafeArea()
 
-            // Loading spinner
-            SeekLoadingSpinner()
-                .scaleEffect(1.5)
+            VStack(spacing: SeekTheme.spacingLarge) {
+                Spacer()
 
-            VStack(spacing: SeekTheme.spacingMedium) {
-                // Main message
-                Text(appStateManager.indexingMessage)
-                    .font(.title2)
-                    .fontWeight(.medium)
-                    .foregroundColor(SeekTheme.appTextPrimary)
-                    .multilineTextAlignment(.center)
-                    .animation(.easeInOut(duration: 0.3), value: appStateManager.indexingMessage)
+                // Loading spinner
+                SeekLoadingSpinner()
 
-                // Progress information
-                if appStateManager.totalFiles > 0 {
-                    VStack(spacing: SeekTheme.spacingXSmall) {
-                        // Progress bar
-                        ProgressView(value: appStateManager.indexingProgress)
-                            .progressViewStyle(LinearProgressViewStyle())
-                            .tint(SeekTheme.appPrimary)
-                            .animation(.easeInOut(duration: 0.2), value: appStateManager.indexingProgress)
+                VStack(spacing: SeekTheme.spacingMedium) {
+                    // Use the dynamic message from appStateManager with fixed sizing to prevent layout conflicts
+                    Text(appStateManager.indexingMessage)
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundColor(SeekTheme.appTextPrimary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: 30) // Prevent layout jumps from text changes
+                        .id("indexing-message") // Stable identity to prevent animation conflicts
 
-                        // File count
-                        HStack {
-                            Text("\(appStateManager.filesProcessed) of \(appStateManager.totalFiles) files")
-                                .font(.caption)
-                                .foregroundColor(SeekTheme.appTextSecondary)
-
-                            Spacer()
-
-                            Text("\(Int(appStateManager.indexingProgress * 100))%")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(SeekTheme.appTextSecondary)
-                        }
-                    }
-                    .animation(.easeInOut(duration: 0.3), value: appStateManager.totalFiles)
+                    // Simple encouraging message
+                    Text("This will just take a moment")
+                        .font(.body)
+                        .foregroundColor(SeekTheme.appTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: 400) // Slightly wider to accommodate text
+                .frame(minHeight: 100) // Fixed minimum height to prevent layout shifts
 
-                // Encouraging message
-                Text("This may take a moment depending on the number of files")
-                    .font(.caption)
-                    .foregroundColor(SeekTheme.appTextTertiary)
-                    .multilineTextAlignment(.center)
+                Spacer()
             }
-            .frame(maxWidth: 300)
-
-            Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(SeekTheme.appBackground)
+        .clipped() // Prevent any layout overflow
     }
 }
 

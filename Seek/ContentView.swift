@@ -14,11 +14,17 @@ struct ContentView: View {
 
                 case .indexing:
                     IndexingView(appStateManager: appStateManager)
-                        .transition(.opacity)
+                        .transition(.asymmetric(
+                            insertion: .opacity.animation(.easeInOut(duration: 0.6)),
+                            removal: .opacity.animation(.easeInOut(duration: 0.6).delay(0.1))
+                        ))
 
                 case .mainApp:
                     MainAppView()
-                        .transition(.opacity)
+                        .transition(.asymmetric(
+                            insertion: .opacity.animation(.easeInOut(duration: 0.6).delay(0.2)),
+                            removal: .opacity.animation(.easeInOut(duration: 0.6))
+                        ))
 
                 case .indexingError(let errorMessage):
                     IndexingErrorView(errorMessage: errorMessage, appStateManager: appStateManager)
@@ -26,7 +32,6 @@ struct ContentView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: appStateManager.currentState)
         .onAppear {
             // Initialize basic app services
             initializeApp()

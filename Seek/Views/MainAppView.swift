@@ -6,6 +6,7 @@ struct MainAppView: View {
     @State private var hasSearchResults = false
     @State private var refreshTrigger = false
     @State private var isRefreshing = false
+    @State private var isTransitionComplete = false
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility,
@@ -29,7 +30,7 @@ struct MainAppView: View {
                     }
                 }
                 .id(selectedView)
-                .animation(.easeInOut(duration: 0.2), value: selectedView)
+                .animation(isTransitionComplete ? .easeInOut(duration: 0.2) : nil, value: selectedView)
             }
         )
         .background(SeekTheme.appBackground)
@@ -63,6 +64,12 @@ struct MainAppView: View {
                         Image(systemName: "plus")
                     }
                 }
+            }
+        }
+        .onAppear {
+            // Delay enabling internal animations to avoid conflicts with transition
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                isTransitionComplete = true
             }
         }
     }

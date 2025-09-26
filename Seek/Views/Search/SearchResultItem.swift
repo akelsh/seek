@@ -7,6 +7,7 @@ struct SearchResultItem: View {
     let isSelected: Bool
     let action: () -> Void
     @State private var isHovered = false
+    @State private var iconRefreshTrigger = false
 
     var body: some View {
         Button(action: action) {
@@ -15,6 +16,7 @@ struct SearchResultItem: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 32, height: 32)
+                    .id("icon-\(fileEntry.fullPath)-\(iconRefreshTrigger)")
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(fileEntry.name)
@@ -52,6 +54,11 @@ struct SearchResultItem: View {
         .cornerRadius(8)
         .onHover { hovering in
             isHovered = hovering
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("IconCacheUpdated"))) { notification in
+            if let path = notification.userInfo?["path"] as? String, path == fileEntry.fullPath {
+                iconRefreshTrigger.toggle()
+            }
         }
         .contextMenu {
             Button("Open") { action() }
