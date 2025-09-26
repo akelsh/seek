@@ -48,6 +48,7 @@ class FileSystemMonitor {
     }
 
     func startMonitoringWithRecovery() async {
+        logger.fileSystemInfo("FileSystemMonitor: Starting monitoring with recovery")
         await startMonitoringInternal()
     }
 
@@ -79,9 +80,10 @@ class FileSystemMonitor {
         monitoringPaths = pathsToMonitor
 
         if startEventStream(stream) {
-            logger.fileSystemInfo("File system monitoring started successfully")
+            logger.fileSystemInfo("FileSystemMonitor: File system monitoring started successfully for paths: \(pathsToMonitor)")
+            logger.fileSystemInfo("FileSystemMonitor: Monitoring is now active with event stream")
         } else {
-            logger.fileSystemError("Failed to start file system monitoring")
+            logger.fileSystemError("FileSystemMonitor: Failed to start file system monitoring")
             stopMonitoring()
         }
     }

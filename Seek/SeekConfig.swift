@@ -101,7 +101,8 @@ enum SeekConfig {
             .fileSizeKey,
             .contentModificationDateKey,
             .isSymbolicLinkKey,
-            .fileResourceIdentifierKey
+            .fileResourceIdentifierKey,
+            .isPackageKey
         ]
     }
     

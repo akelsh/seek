@@ -52,11 +52,16 @@ class AppStateManager: ObservableObject {
             if !isIndexed {
                 await startIndexing()
             } else {
-                // Already indexed, go straight to main app
+                // Database already indexed, go to main app
                 await MainActor.run {
                     currentState = .mainApp
                 }
             }
+
+            // Always start file system monitoring for real-time updates
+            // (regardless of whether we needed indexing or not)
+            await FileSystemMonitor.shared.startMonitoringWithRecovery()
+
         } catch {
             await MainActor.run {
                 currentState = .indexingError("Failed to check indexing status: \(error.localizedDescription)")
@@ -84,10 +89,7 @@ class AppStateManager: ObservableObject {
             await updateIndexingMessage("Scanning file system...")
             try await indexingService.performSmartIndexing()
 
-            // Indexing complete, start file monitoring and go to main app
-            await updateIndexingMessage("Starting file monitoring...")
-            await FileSystemMonitor.shared.startMonitoringWithRecovery()
-
+            // Indexing complete, go to main app
             await MainActor.run {
                 currentState = .mainApp
             }

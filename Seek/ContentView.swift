@@ -34,11 +34,7 @@ struct ContentView: View {
     }
 
     private func initializeApp() {
-        // Initialize database service (this will create tables asynchronously)
         let _ = DatabaseService.shared
-
-        // Note: File system monitoring is now started after indexing completes
-        // in AppStateManager.startIndexing() method
     }
 }
 
