@@ -2,6 +2,8 @@
 
 Seek is a native macOS application inspired by [Everything](https://www.voidtools.com/). It provides powerful filtering and search capabilities for you to find whatever file you're looking for in mere seconds.
 
+<img width="2508" height="1720" alt="image" src="https://github.com/user-attachments/assets/93a3a8a0-d1e1-40af-a254-a7c330b80a4e" />
+
 ## Project Status
 
 This project is currently in active development. Features and documentation may be incomplete or subject to change.
